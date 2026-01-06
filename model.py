@@ -1,3 +1,5 @@
+%%writefile model.py
+
 import torch 
 import torch.nn as nn 
 from layer import *
@@ -6,6 +8,7 @@ def getModel(config):
     models = {
         'DNN': DNN,
         'KWL': KWL,
+        'KWL_alt': KWL_alt,
         'Resnet': Resnet,
         'Toy': Toy
     }[config.model]
@@ -128,7 +131,72 @@ class KWL(nn.Module):
 
     def forward(self, x):
         return self.model(x)
-    
+
+
+class KWL_alt(nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.in_channels = config.in_channels
+        self.img_size = config.img_size
+        self.num_classes = config.num_classes
+        self.gamma = config.gamma 
+        self.LLN = config.LLN
+        self.width = config.width
+        self.layer = config.layer
+
+        w = self.width
+        if self.gamma is not None:
+            g = self.gamma ** (1.0 / 2)
+        n = self.img_size // 4
+
+        if self.layer == 'Plain':
+            self.model = nn.Sequential(
+                PlainConv(self.in_channels, 32 * w, 3), nn.ReLU(),
+                PlainConv(32 * w, 32 * w, 3, stride=2), nn.ReLU(),
+                PlainConv(32 * w, 64 * w, 3), nn.ReLU(),
+                PlainConv(64 * w, 64 * w, 3, stride=2), nn.ReLU(),
+                nn.Flatten(),
+                nn.Linear(64 * n * n * w, 640 * w), nn.ReLU(),
+                nn.Linear(640 * w, 512 * w), nn.ReLU(),
+                nn.Linear(512 * w, self.num_classes)
+            )
+        elif self.layer == 'Sandwich':
+            self.model = nn.Sequential(
+                SandwichConv(self.in_channels, 32 * w, 3, scale=g), 
+                SandwichConv(32 * w, 32 * w, 3, stride=2), 
+                SandwichConv(32 * w, 64 * w, 3), 
+                SandwichConv(64 * w, 64 * w, 3, stride=2), 
+                nn.Flatten(),
+                SandwichFc(64 * n * n * w, 512 * w), 
+                SandwichLin(512 * w, self.num_classes, scale=g)
+            )
+        elif self.layer == 'Orthogon':
+            self.model = nn.Sequential(
+                    OrthogonConv(self.in_channels, 32 * w, 3, scale=g), 
+                    OrthogonConv(32 * w, 32 * w, 3, stride=2), 
+                    OrthogonConv(32 * w, 64 * w, 3), 
+                    OrthogonConv(64 * w, 64 * w, 3, stride=2), 
+                    nn.Flatten(),
+                    OrthogonFc(64 * n * n * w, 640 * w), 
+                    OrthogonFc(640 * w, 512 * w), 
+                    OrthogonLin(512 * w, self.num_classes, scale=g)
+                ) 
+        elif self.layer == 'Aol':
+            self.model = nn.Sequential(
+                AolConv(self.in_channels, 32 * w, 3, scale=g), 
+                AolConv(32 * w, 32 * w, 3), 
+                AolConv(32 * w, 64 * w, 3), 
+                AolConv(64 * w, 64 * w, 3), 
+                nn.AvgPool2d(4, divisor_override=4),
+                nn.Flatten(),
+                AolFc(64 * n * n * w, 640 * w), 
+                AolFc(640 * w, 512 * w), 
+                AolLin(512 * w, self.num_classes, scale=g)
+            )  
+
+    def forward(self, x):
+        return self.model(x)
+
 # #---------------------------------------------------------------------------
 class Resnet(nn.Module):
     def __init__(self, config):
