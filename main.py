@@ -1,3 +1,5 @@
+%%writefile main.py
+
 import os
 import warnings
 from argparse import ArgumentParser
@@ -17,6 +19,14 @@ def main(args):
         config.in_channels = 3
         config.img_size = 32
         config.num_classes = 10
+    elif config.dataset == 'lisa':
+        config.in_channels = 3
+        config.img_size = 32
+        config.num_classes = 7
+    elif config.dataset == 'bstl':
+        config.in_channels = 3
+        config.img_size = 32
+        config.num_classes = 4
     elif config.dataset == 'cifar100':
         config.in_channels = 3
         config.img_size = 32
@@ -39,7 +49,7 @@ def main(args):
         config.LLN = True
         config.normalized = False
         config.loss = 'xent'
-    elif config.model == 'KWL':
+    elif config.model == 'KWL' or config.model == 'KWL_alt':
         if config.layer is None:
             config.layer = 'Plain'
         if config.scale is None:
