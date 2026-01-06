@@ -4,21 +4,29 @@ import time
 from model import getModel
 from dataset import getDataLoader
 from utils import *
+from torch.autograd import grad
 
 def train(config):
-    
     seed_everything(config.seed)
+    
     trainLoader, testLoader = getDataLoader(config)
-    model = getModel(config).cuda()
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    
+    model = getModel(config).to(device)
+    
     criterion = getLoss(config)
-
+    
     txtlog = TxtLogger(config)
     txtlog(vars(config))
-
     txtlog(f"Set global seed to {config.seed:d}")
     
-    nparams = np.sum([p.numel() for p in model.parameters() if p.requires_grad])
-
+    if isinstance(model, torch.nn.DataParallel):
+        params = model.module.parameters()
+    else:
+        params = model.parameters()
+    
+    nparams = np.sum([p.numel() for p in params if p.requires_grad])
+    
     if nparams >= 1000000:
         txtlog(f"name: {config.model}-{config.layer}-{config.scale}, num_params: {1e-6*nparams:.1f}M")
     else:
@@ -30,13 +38,21 @@ def train(config):
     PrintFreq = config.print_freq
     LLN = config.LLN
     gamma = config.gamma
-
+    
     opt = torch.optim.Adam(model.parameters(), lr=Lr, weight_decay=0)
-    lr_schedule = lambda t: np.interp([t], [0, Epochs*2//5, Epochs*4//5, Epochs], [0, Lr, Lr/20.0, 0])[0]
-
+    
+    lr_schedule = lambda t: np.interp(
+        [t],
+        [0, Epochs*2//5, Epochs*4//5, Epochs],
+        [0, Lr, Lr/20.0, 0]
+    )[0]
+    
     tloss_step, tacc_step, lr_step = [], [], []
-    ttime_epoch,vtime_epoch,tloss_epoch,vloss_epoch,tacc_epoch, vacc_epoch = [],[],[],[],[],[]
-    vacc_epoch,acc36_epoch,acc72_epoch,acc108_epoch = [], [], [], []
+    ttime_epoch, vtime_epoch = [], []
+    tloss_epoch, vloss_epoch = [], []
+    tacc_epoch, vacc_epoch = [], []
+    vacc_epoch, acc36_epoch, acc72_epoch, acc108_epoch = [], [], [], []
+
     for epoch in range(Epochs):
         ## train_step
         start = time.time()
@@ -49,6 +65,8 @@ def train(config):
 
             yh = model(x)
             J = criterion(yh, y)
+            #reg, grad_norm = cure.compute(x, y, h=5)
+            #J = J + reg
 
             opt.zero_grad()
             J.backward()
@@ -79,7 +97,8 @@ def train(config):
         Acc36, Acc72, Acc108 = 0.0, 0.0, 0.0
         model.eval()
         if LLN:
-            last_weight = model.model[-1].weight
+            core_model = model.module if isinstance(model, torch.nn.DataParallel) else model
+            last_weight = core_model.model[-1].weight
             normalized_weight = torch.nn.functional.normalize(last_weight, p=2, dim=1)
 
         start = time.time()
@@ -140,7 +159,11 @@ def train(config):
             txtlog(f"Epoch: {epoch+1:3d} | time: {train_time:.1f}/{test_time:.1f}, loss: {train_loss:.2f}/{test_loss:.2f}, acc: {train_acc:.1f}/{test_acc:.1f}, 100lr: {100*lr:.3f}")
 
         if epoch % config.save_freq == 0 or epoch + 1 == Epochs:
-            torch.save(model.state_dict(), f"{config.train_dir}/model.ckpt")
+            if isinstance(model, torch.nn.DataParallel):
+                torch.save(model.module.state_dict(), f"{config.train_dir}/model.ckpt")
+            else:
+                torch.save(model.state_dict(), f"{config.train_dir}/model.ckpt")
+
     
     # after training
     np.savetxt(f'{config.train_dir}/tloss_step.csv',np.array(tloss_step))
@@ -241,6 +264,3 @@ def train_toy(config):
         txtlog(f"Lipschitz: {gam:.2f}/--")
     else:
         txtlog(f"Lipschitz capcity: {gam:.4f}/{gamma:.2f}, {100*gam/gamma:.2f}")
-
-
-
