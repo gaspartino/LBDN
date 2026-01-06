@@ -1,8 +1,10 @@
+%%writefile dataset.py
+
 import os
 import torch
-from torchvision.datasets import MNIST, CIFAR10, CIFAR100
+from torchvision.datasets import MNIST, CIFAR10, CIFAR100, ImageFolder
 from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms
+from torchvision import datasets, models, transforms
 from torchvision.datasets import VisionDataset
 from torchvision.datasets.folder import default_loader
 from torchvision.datasets.utils import extract_archive, check_integrity, download_url, verify_str_arg
@@ -13,7 +15,9 @@ def getDataLoader(config):
         'cifar10': cifar10_loaders,
         'cifar100': cifar100_loaders,
         'tiny_imagenet': tiny_imagenet_loaders,
-        'square_wave': square_wave_loaders
+        'square_wave': square_wave_loaders,
+        'lisa': lisa_loaders,
+        'bstl': bstl_loaders
     }[config.dataset]
     return loaders(config)
 
@@ -247,7 +251,7 @@ def cifar10_loaders(config):
     else:
         std = [1.0, 1.0, 1.0]
 
-    normalize = transforms.Normalize(mean=mean, std=std)
+    normalize = transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
     hue = 0.02
     saturation = (.3, 2.)
     brightness = 0.1
@@ -269,6 +273,48 @@ def cifar10_loaders(config):
     testLoader = DataLoader(test_dset, batch_size=config.test_batch_size, shuffle=False, pin_memory=True, num_workers=config.num_workers)
 
     return trainLoader, testLoader
+
+def lisa_loaders(config):
+    
+    train_dir = "/kaggle/input/cropped-lisa-traffic-light-dataset/cropped_lisa_1/train_1"
+    val_dir = "/kaggle/input/cropped-lisa-traffic-light-dataset/cropped_lisa_1/val_1"
+    
+    transform = transforms.Compose([
+        transforms.Resize((32, 32)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],  # ImageNet mean
+            std=[0.229, 0.224, 0.225])    # ImageNet std
+    ])
+
+    train_dataset = ImageFolder(train_dir, transform=transform)
+    test_dataset = ImageFolder(val_dir, transform=transform)
+    
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=2)
+    test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=2)
+    
+    return train_loader, test_loader
+
+def bstl_loaders(config): 
+    data_dir = '/kaggle/input/bstl-dataset'
+    train_dir = f"{data_dir}/train"
+    test_dir = f"{data_dir}/test"
+    
+    transform = transforms.Compose([
+        transforms.Resize((32, 32)),
+        transforms.ToTensor(),
+        transforms.Normalize(
+            mean=[0.485, 0.456, 0.406],  # ImageNet mean
+            std=[0.229, 0.224, 0.225])    # ImageNet std
+    ])
+
+    train_dataset = ImageFolder(train_dir, transform=transform)
+    test_dataset = ImageFolder(test_dir, transform=transform)
+    
+    train_loader = DataLoader(train_dataset, batch_size=128, shuffle=True, num_workers=2)
+    test_loader = DataLoader(test_dataset, batch_size=128, shuffle=False, num_workers=2)
+    
+    return train_loader, test_loader
 
 def mnist_loaders(config):
 
@@ -297,4 +343,3 @@ def mnist_loaders(config):
     
     return trainLoader, testLoader
     
-
