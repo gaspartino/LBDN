@@ -1,14 +1,17 @@
 import os
 import warnings
+import random
 from argparse import ArgumentParser
 from train import *
 from evaluate import *
+
 warnings.filterwarnings("ignore")
 
 def main(args):
 
     config = args 
-
+    
+    config.seed = random.randint(0, 100)
     config.lip_batch_size = 64
     config.print_freq = 10
     config.save_freq = 5
@@ -98,11 +101,11 @@ def main(args):
         config.offset = 1.5
 
     if config.gamma is None:
-        config.train_dir = f"{config.root_dir}_seed{config.seed}/{config.dataset}/{config.model}-{config.layer}-{config.scale}"
+        config.train_dir = f"{config.root_dir}/{config.dataset}/{config.model}-{config.layer}-{config.scale}"
     elif config.LLN:
-        config.train_dir = f"{config.root_dir}_seed{config.seed}/{config.dataset}/{config.model}-{config.layer}-{config.scale}-LLN-gamma{config.gamma:.1f}"
+        config.train_dir = f"{config.root_dir}/{config.dataset}/{config.model}-{config.layer}-{config.scale}-LLN-gamma{config.gamma:.1f}"
     else:
-        config.train_dir = f"{config.root_dir}_seed{config.seed}/{config.dataset}/{config.model}-{config.layer}-{config.scale}-gamma{config.gamma:.1f}"
+        config.train_dir = f"{config.root_dir}/{config.dataset}/{config.model}-{config.layer}-{config.scale}-gamma{config.gamma:.1f}"
 
     os.makedirs("./data", exist_ok=True)
     os.makedirs(config.train_dir, exist_ok=True)
@@ -129,7 +132,6 @@ if __name__ == '__main__':
     parser.add_argument('-m', '--model', type=str, default='Resnet', help="[DNN, KWL, Resnet, Toy]")
     parser.add_argument('-d', '--dataset', type=str, default='tiny_imagenet', help="dataset [cifar10, cifar100, tiny_imagenet, square_wave]")
     parser.add_argument('-g', '--gamma', type=float, default=1.0, help="Network Lipschitz bound")
-    parser.add_argument('-s', '--seed', type=int, default=123)
     parser.add_argument('-e','--epochs', type=int, default=100)
     parser.add_argument('--layer', type=str, default='SLL')
     parser.add_argument('--scale', type=str, default='xlarge')
