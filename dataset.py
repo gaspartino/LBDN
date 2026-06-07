@@ -2,6 +2,7 @@
 
 import os
 import torch
+import kagglehub
 from torchvision.datasets import MNIST, CIFAR10, CIFAR100, ImageFolder
 from torch.utils.data import Dataset, DataLoader
 from torchvision import datasets, models, transforms
@@ -275,16 +276,23 @@ def cifar10_loaders(config):
     return trainLoader, testLoader
 
 def lisa_loaders(config):
+    path = kagglehub.dataset_download("chandanakuntala/cropped-lisa-traffic-light-dataset")
+    train_dir = f"{path}/cropped_lisa_1/train_1"
+    val_dir = f"{path}/cropped_lisa_1/val_1"
     
-    train_dir = "/kaggle/input/cropped-lisa-traffic-light-dataset/cropped_lisa_1/train_1"
-    val_dir = "/kaggle/input/cropped-lisa-traffic-light-dataset/cropped_lisa_1/val_1"
+    mean=[1.0, 1.0, 1.0]
+    std=[1.0, 1.0, 1.0]
     
+    if config.normalized:
+        mean=[0.485, 0.456, 0.406]
+        std=[0.229, 0.224, 0.225]
+        
     transform = transforms.Compose([
         transforms.Resize((32, 32)),
         transforms.ToTensor(),
         transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],  # ImageNet mean
-            std=[0.229, 0.224, 0.225])    # ImageNet std
+            mean=mean,  
+            std=std) 
     ])
 
     train_dataset = ImageFolder(train_dir, transform=transform)
@@ -296,16 +304,23 @@ def lisa_loaders(config):
     return train_loader, test_loader
 
 def bstl_loaders(config): 
-    data_dir = '/kaggle/input/bstl-dataset'
-    train_dir = f"{data_dir}/train"
-    test_dir = f"{data_dir}/test"
+    path = kagglehub.dataset_download("andrevinic/bstl-dataset")
+    train_dir = f"{path}/train"
+    test_dir = f"{path}/test"
+
+    mean=[1.0, 1.0, 1.0]
+    std=[1.0, 1.0, 1.0]
     
+    if config.normalized:
+        mean=[0.485, 0.456, 0.406]
+        std=[0.229, 0.224, 0.225]
+        
     transform = transforms.Compose([
         transforms.Resize((32, 32)),
         transforms.ToTensor(),
         transforms.Normalize(
-            mean=[0.485, 0.456, 0.406],  # ImageNet mean
-            std=[0.229, 0.224, 0.225])    # ImageNet std
+            mean=mean,  
+            std=std) 
     ])
 
     train_dataset = ImageFolder(train_dir, transform=transform)
