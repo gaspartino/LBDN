@@ -81,7 +81,7 @@ def evaluate(config):
     x = (torch.rand(xshape) + 0.3 * torch.randn(xshape)).cuda()
     model(x)
 
-    model_state = torch.load(f"{config.train_dir}/{config.model}_{config.dataset}_{config.loop_idx}.ckpt")
+    model_state = torch.load(f"{config.train_dir}/{config.model}_{config.dataset}_{config.loop_idx+1}.ckpt")
     model.load_state_dict(model_state)
 
     model(x)
