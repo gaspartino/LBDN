@@ -1,5 +1,3 @@
-%%writefile evaluate.py
-
 import torch
 import torch.linalg as la
 import numpy as np
@@ -75,6 +73,8 @@ def evaluate(config):
     model = getModel(config).cuda()
 
     _, testLoader = getDataLoader(config)
+
+    num_classes = len(testLoader.dataset.classes)
     txtlog = TxtLogger(config)
 
     xshape = (1, config.in_channels, config.img_size, config.img_size)
@@ -108,8 +108,8 @@ def evaluate(config):
     mu = torch.Tensor(mean)[:, None, None].cuda()
     sg = torch.Tensor(std)[:, None, None].cuda()
 
-    aa_model = NormalizedModel(model, mean, std).cuda()
-    aa_model.eval()
+    norm_model = NormalizedModel(model, mean, std).cuda()
+    norm_model.eval()
 
     # Avaliar em dados limpos
     y_true = []
@@ -123,7 +123,7 @@ def evaluate(config):
         xg.mul_(sg).add_(mu)
     
         # inferência limpa
-        logits = aa_model(xg).detach()
+        logits = norm_model(xg).detach()
         preds = logits.argmax(dim=1)
     
         y_true.append(y.cpu().numpy())
@@ -162,7 +162,7 @@ def evaluate(config):
             xd = attack(xg, y)
     
             # inferência
-            logits = aa_model(xd).detach()
+            logits = norm_model(xd).detach()
             preds = logits.argmax(dim=1)
     
             # acumula rótulos
@@ -187,14 +187,20 @@ def evaluate(config):
         }
 
     all_eps = [0.01, 8/255, 0.04, 0.055, 0.07, 0.085, 0.1, 0.115, 0.13, 0.15, 0.175, 0.2]
-   # all_eps = [0.085, 0.1, 0.115, 0.13, 0.15, 0.175, 0.2]
-    attack_fns = {
-        "FGSM": lambda eps: FGSM(aa_model, eps=eps),
-        "PGD":  lambda eps: PGD(aa_model, eps=eps),
-        "MIM":  lambda eps: MIFGSM(model, eps=eps),
-        "AutoAttack":  lambda eps: AutoAttack(aa_model, eps=eps, n_classes=4)
 
+    
+    attack_fns = {
+        "FGSM": lambda eps: FGSM(norm_model, eps=eps),
+        "PGD": lambda eps: PGD(norm_model, eps=eps),
+        "MIM": lambda eps: MIFGSM(norm_model, eps=eps),
     }
+    
+    if not config.ignore_autoattack:
+        attack_fns["AutoAttack"] = lambda eps: AutoAttack(
+            norm_model,
+            eps=eps,
+            n_classes=config.num_classes
+        )
 
     for attack_name, attack_fn in attack_fns.items():
         print("")
