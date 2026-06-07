@@ -65,8 +65,6 @@ def train(config):
 
             yh = model(x)
             J = criterion(yh, y)
-            #reg, grad_norm = cure.compute(x, y, h=5)
-            #J = J + reg
 
             opt.zero_grad()
             J.backward()
@@ -160,12 +158,10 @@ def train(config):
 
         if epoch % config.save_freq == 0 or epoch + 1 == Epochs:
             if isinstance(model, torch.nn.DataParallel):
-                torch.save(model.module.state_dict(), f"{config.train_dir}/model.ckpt")
+                torch.save(model.module.state_dict(), f"{config.train_dir}/{config.model}_{config.dataset}_{config.loop_idx}.ckpt")
             else:
-                torch.save(model.state_dict(), f"{config.train_dir}/model.ckpt")
+                torch.save(model.state_dict(), f"{config.train_dir}/{config.model}_{config.dataset}_{config.loop_idx}.ckpt")
 
-    
-    # after training
     np.savetxt(f'{config.train_dir}/tloss_step.csv',np.array(tloss_step))
     np.savetxt(f'{config.train_dir}/tacc_step.csv',np.array(tacc_step))
     np.savetxt(f'{config.train_dir}/lr_step.csv',np.array(lr_step))
