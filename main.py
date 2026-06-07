@@ -108,34 +108,34 @@ def main(args):
 
     os.makedirs("./data", exist_ok=True)
     os.makedirs(config.train_dir, exist_ok=True)
-    if config.mode == 'train':
-        if config.model == 'Toy':
-            train_toy(config)
-        else:
-            train(config)
-    elif config.mode == 'eval':
-        if config.model == 'Toy':
-            evaluate_toy(config)
-        else:
-            evaluate(config)
+    for loop_idx in range(args.total_loops):
+        if args.total_loops > 1:
+            print(f"\n========== Loop {loop_idx + 1}/{args.total_loops} ==========\n")
+
+        config.loop_idx = loop_idx
+        if config.mode == 'train':
+            if config.model == 'Toy':
+                train_toy(config)
+            else:
+                train(config)
+        elif config.mode == 'eval':
+            if config.model == 'Toy':
+                evaluate_toy(config)
+            else:
+                evaluate(config)
     
 
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument('--mode', type=str, default='train')
-    parser.add_argument('-m', '--model', type=str, default='Resnet',
-                        help="[DNN, KWL, Resnet, Toy]")
-    parser.add_argument('-d', '--dataset', type=str, default='tiny_imagenet',
-                        help="dataset [cifar10, cifar100, tiny_imagenet, square_wave]")
-    parser.add_argument('-g', '--gamma', type=float, default=1.0,
-                        help="Network Lipschitz bound")
+    parser.add_argument('-m', '--model', type=str, default='Resnet', help="[DNN, KWL, Resnet, Toy]")
+    parser.add_argument('-d', '--dataset', type=str, default='tiny_imagenet', help="dataset [cifar10, cifar100, tiny_imagenet, square_wave]")
+    parser.add_argument('-g', '--gamma', type=float, default=1.0, help="Network Lipschitz bound")
     parser.add_argument('-s', '--seed', type=int, default=123)
     parser.add_argument('-e','--epochs', type=int, default=100)
-
     parser.add_argument('--layer', type=str, default='SLL')
     parser.add_argument('--scale', type=str, default='xlarge')
-    parser.add_argument('--lr', type=float, default=0.01,
-                        help="learning rate")
+    parser.add_argument('--lr', type=float, default=0.01, help="learning rate")
     parser.add_argument('--loss', type=str, default='xent')
     parser.add_argument('--root_dir', type=str, default='./saved_models')
     parser.add_argument('--train_batch_size', type=int, default=256)
@@ -144,7 +144,9 @@ if __name__ == '__main__':
     parser.add_argument('--LLN', action='store_true')
     parser.add_argument('--normalized', action='store_true')
     parser.add_argument('--cert_acc', action='store_true')
-    
+    parser.add_argument('-tl', '--total_loops', type=int, default=1)
+    parser.add_argument('-ia', '--ignore_autoattack', action='store_true')
+
     args = parser.parse_args()
 
     main(args)
