@@ -1,5 +1,3 @@
-%%writefile dataset.py
-
 import os
 import torch
 import kagglehub
