@@ -1,5 +1,3 @@
-%%writefile main.py
-
 import os
 import warnings
 from argparse import ArgumentParser
